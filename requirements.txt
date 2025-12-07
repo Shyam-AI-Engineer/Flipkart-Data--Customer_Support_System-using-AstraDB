@@ -1,0 +1,12 @@
+langchain-astradb
+pandas
+langchain_google_genai
+fastapi 
+uvicorn 
+python-multipart
+jinja2
+python-dotenv 
+langchain 
+langchain-core
+langchain-community 
+langchain_groq
