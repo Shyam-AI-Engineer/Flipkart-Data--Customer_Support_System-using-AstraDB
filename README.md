@@ -15,22 +15,70 @@ An AI-powered e-commerce customer support chatbot that answers product queries u
 
 ## 3. How It Works (Architecture)
 
-```
-User (Chat UI)
-     ↓
-FastAPI /get endpoint
-     ↓
-RAG Pipeline (LangChain)
-     ├── Retriever → AstraDB (semantic search over product reviews)
-     ├── Prompt Template (inject retrieved context)
-     └── Groq LLM → generate response
-     ↓
-Response displayed in chat UI
+### Query Flow (Runtime)
+
+```mermaid
+flowchart TD
+    A([User]) -->|Types product query| B[Chat UI\nHTML + jQuery + Bootstrap]
+    B -->|POST /get| C[FastAPI\nUvicorn :8001]
+    C --> D[LangChain RAG Pipeline]
+
+    D --> E[Retriever\nretriever/retrieval.py]
+    E -->|Embed query| F[Google Embeddings\ntext-embedding-004]
+    F -->|Semantic search top-10| G[(AstraDB\nVector Store)]
+    G -->|Relevant product docs| E
+    E --> H[Prompt Template\nprompt_library/prompt.py]
+    H -->|Context + Question| I[Groq LLM\nllama-3.1-8b-instant]
+    I -->|AI Response| J[StrOutputParser]
+    J -->|JSON response| B
+    B -->|Displays answer| A
 ```
 
-**Data Ingestion (run once):**
+---
+
+### Data Ingestion Pipeline (Run Once)
+
+```mermaid
+flowchart LR
+    A[Flipkart CSV\nproduct reviews & ratings] -->|pandas read| B[DataIngestion\ningestion_pipeline.py]
+    B -->|Convert rows| C[LangChain Documents\nwith metadata]
+    C -->|Vectorize| D[Google Embeddings\ntext-embedding-004]
+    D -->|Upsert vectors| E[(AstraDB\ncollection: ecommdata)]
 ```
-Flipkart CSV → LangChain Documents → Google Embeddings → AstraDB
+
+---
+
+### Component Overview
+
+```mermaid
+graph TB
+    subgraph Frontend
+        UI[chat.html\nBootstrap + jQuery]
+    end
+
+    subgraph Backend
+        API[main.py\nFastAPI]
+        RET[retrieval.py\nRetriever]
+        ML[model_loader.py\nModels]
+        PT[prompt.py\nPrompt Templates]
+        CFG[config.yaml\nConfiguration]
+    end
+
+    subgraph External Services
+        GROQ[Groq API\nLLM Inference]
+        GOOG[Google AI\nEmbeddings]
+        ASTRA[(AstraDB\nVector DB)]
+    end
+
+    UI <-->|HTTP| API
+    API --> RET
+    API --> ML
+    API --> PT
+    RET --> ASTRA
+    ML --> GROQ
+    ML --> GOOG
+    CFG --> RET
+    CFG --> ML
 ```
 
 ## 4. Setup Steps
